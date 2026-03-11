@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>El Impostor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #0d0d0f;
+    color: #e8e8ec;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+  }
+  .card {
+    background: #18181c;
+    border: 1px solid #2a2a30;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 480px;
+  }
+  h1 { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+  h2 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 24px; }
+  .btn {
+    background: #e63030; color: #fff; border: none; border-radius: 10px;
+    padding: 12px 20px; font-size: 16px; font-weight: 700; cursor: pointer;
+    width: 100%; margin-top: 10px; display: block;
+  }
+  .btn-dark  { background: #252528; }
+  .btn-navy  { background: #1e3a5f; }
+  .btn-sm {
+    background: #252528; color: #e8e8ec; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-sm.red   { background: #e63030; color: #fff; }
+  .btn-sm.navy  { background: #1e3a5f; }
+  .btn-sm.dark-red { background: #3a1e1e; }
+  input[type=text], input[type=search] {
+    background: #0d0d0f; border: 1px solid #333; border-radius: 8px;
+    color: #e8e8ec; padding: 10px 14px; font-size: 15px;
+    width: 100%; outline: none;
+  }
+  input[type=text]:focus, input[type=search]:focus { border-color: #555; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .row input { flex: 1; }
+  .row .add-btn {
+    background: #e63030; color: #fff; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: 20px; font-weight: 900; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .tags { margin-top: 12px; min-height: 36px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #252528; border-radius: 20px; padding: 4px 10px;
+    font-size: 13px; margin: 3px;
+  }
+  .tag .x { cursor: pointer; color: #e63030; font-weight: 900; font-size: 15px; line-height: 1; }
+  hr { border-color: #2a2a30; margin: 16px 0; }
+  .screen { display: none; width: 100%; max-width: 480px; }
+  .screen.active { display: block; }
+  /* game screens centered */
+  #screen-pass, #screen-reveal, #screen-end {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 80vh; width: 100%; max-width: 480px;
+  }
+  #screen-pass.active, #screen-reveal.active, #screen-end.active { display: flex; }
+  .big-emoji { font-size: 56px; margin-bottom: 12px; text-align: center; }
+  .cat-item {
+    background: #111; border: 1px solid #222; border-radius: 12px;
+    padding: 14px; margin-bottom: 10px;
+  }
+  .cat-header { display: flex; justify-content: space-between; align-items: center; }
+  .cat-header strong { font-size: 16px; }
+  .cat-actions { display: flex; gap: 6px; }
+  .cat-sub { color: #666; font-size: 12px; margin-top: 6px; }
+  .word-badge {
+    font-size: 38px; font-weight: 900; letter-spacing: 0;
+    padding: 16px 24px; border-radius: 12px; margin-bottom: 28px; text-align: center;
+  }
+  .word-badge.good  { color: #4caf50; background: rgba(76,175,80,0.08); }
+  .word-badge.evil  { color: #e63030; background: rgba(230,48,48,0.08); letter-spacing: 4px; font-size: 32px; }
+  .hint { color: #555; font-size: 12px; text-align: center; }
+  label.field-label { font-size: 13px; color: #888; display: block; margin-bottom: 6px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ══ MENU ══════════════════════════════════════════════════════════════ -->
+<div id="screen-menu" class="screen active">
+  <div class="card" style="text-align:center; margin-top:40px;">
+    <div class="big-emoji">🕵️</div>
+    <h1>El Impostor</h1>
+    <p class="sub">¿Quién es el infiltrado?</p>
+    <button class="btn" onclick="goTo('setup')">🎮 Nueva Partida</button>
+    <button class="btn btn-navy" onclick="goTo('categories')">🗂️ Gestionar Categorías</button>
+  </div>
+</div>
+
+<!-- ══ SETUP ═════════════════════════════════════════════════════════════ -->
+<div id="screen-setup" class="screen">
+  <div class="card">
+    <h2>👥 Jugadores</h2>
+    <p class="sub" style="margin-top:-10px;">Mínimo 3 jugadores</p>
+    <div class="row">
+      <input type="text" id="playerInput" placeholder="Nombre del jugador..." onkeydown="if(event.key==='Enter') addPlayer()" />
+      <button class="add-btn" onclick="addPlayer()">+</button>
+    </div>
+    <div class="tags" id="playerTags"></div>
+    <hr />
+    <button class="btn" onclick="startGame()">🚀 Empezar Partida</button>
+    <button class="btn btn-dark" onclick="goTo('menu')">← Volver</button>
+  </div>
+</div>
+
+<!-- ══ PASS ═══════════════════════════════════════════════════════════════ -->
+<div id="screen-pass">
+  <div class="card" style="text-align:center; width:100%;">
+    <div class="big-emoji">📱</div>
+    <p style="color:#888;font-size:14px;margin-bottom:8px;">
+      Categoría: <strong id="passCat" style="color:#e8e8ec"></strong>
+    </p>
+    <h2 style="font-size:26px;">Pasa el móvil a<br/><span id="passName" style="color:#e63030"></span></h2>
+    <p style="color:#888;font-size:13px;margin:8px 0 24px;">Pulsa cuando estés listo</p>
+    <button class="btn" onclick="showReveal()">👁️ Ver mi rol</button>
+  </div>
+</div>
+
+<!-- ══ REVEAL ═════════════════════════════════════════════════════════════ -->
+<div id="screen-reveal" onclick="nextPlayer()">
+  <div id="revealCard" class="card" style="text-align:center; width:100%; cursor:pointer;">
+    <div class="big-emoji" id="revealEmoji">🔍</div>
+    <p style="color:#666;font-size:13px;margin-bottom:4px;" id="revealPlayerName"></p>
+    <p style="color:#666;font-size:12px;margin-bottom:20px;">tu palabra es:</p>
+    <div class="word-badge good" id="revealWord"></div>
+    <p class="hint" id="revealHint"></p>
+  </div>
+</div>
+
+<!-- ══ END ════════════════════════════════════════════════════════════════ -->
+<div id="screen-end">
+  <div class="card" style="text-align:center; width:100%;">
+    <div class="big-emoji">🎯</div>
+    <h2 style="font-size:26px;">¡Que empiece el juego!</h2>
+    <p style="color:#888;font-size:14px;margin-bottom:24px;">Discutid, debatid y descubrid quién es el impostor.</p>
+    <button class="btn" onclick="startGame()">🔄 Nueva ronda</button>
+    <button class="btn btn-dark" onclick="goTo('menu')">🏠 Menú principal</button>
+  </div>
+</div>
+
+<!-- ══ CATEGORIES ═════════════════════════════════════════════════════════ -->
+<div id="screen-categories" class="screen">
+  <div class="card">
+    <h2>🗂️ Categorías</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="btn-sm red" onclick="openCatEditor(null)">+ Nueva categoría</button>
+      <button class="btn-sm" onclick="exportJSON()">⬇ Exportar JSON</button>
+      <button class="btn-sm" onclick="document.getElementById('importFile').click()">⬆ Importar JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)" />
+    </div>
+    <div id="catList"></div>
+    <button class="btn btn-dark" onclick="goTo('menu')" style="margin-top:16px;">← Volver</button>
+  </div>
+</div>
+
+<!-- ══ CAT EDITOR ═════════════════════════════════════════════════════════ -->
+<div id="screen-catEdit" class="screen">
+  <div class="card">
+    <h2 id="catEditTitle">➕ Nueva Categoría</h2>
+    <label class="field-label">Nombre de la categoría</label>
+    <input type="text" id="catNameInput" placeholder="Ej: 🍕 Comida" />
+    <label class="field-label">Palabras (<span id="wordCount">0</span>)</label>
+    <div class="row">
+      <input type="text" id="wordInput" placeholder="Añadir palabra..." onkeydown="if(event.key==='Enter') addWordToEditor()" />
+      <button class="add-btn" onclick="addWordToEditor()">+</button>
+    </div>
+    <div class="tags" id="wordTags"></div>
+    <hr />
+    <button class="btn" onclick="saveCatEditor()">💾 Guardar categoría</button>
+    <button class="btn btn-dark" onclick="goTo('categories')">← Cancelar</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let categories = [
+  { id:"1", name:"🍕 Comida",    words:["Pizza","Hamburguesa","Sushi","Tacos","Paella","Lasaña","Ceviche","Ramen"] },
+  { id:"2", name:"🎬 Películas", words:["Titanic","Matrix","Inception","Avatar","Interstellar","El Padrino","Joker"] },
+  { id:"3", name:"⚽ Deportes",  words:["Fútbol","Baloncesto","Tenis","Natación","Ciclismo","Golf","Rugby","Boxeo"] },
+  { id:"4", name:"🌍 Países",    words:["España","Francia","Japón","Brasil","México","Italia","Alemania","Argentina"] },
+];
+
+let players      = [];
+let assignments  = []; // [{name, word}]
+let currentIdx   = 0;
+let gameCategory = "";
+
+// editor state
+let editingCatId   = null;
+let editingWords   = [];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+const ALL_SCREENS = ['menu','setup','pass','reveal','end','categories','catEdit'];
+
+function goTo(name) {
+  ALL_SCREENS.forEach(id => {
+    const el = document.getElementById('screen-' + id);
+    if (!el) return;
+    el.classList.remove('active');
+  });
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  // refresh dynamic content
+  if (name === 'categories') renderCatList();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SETUP — players
+// ═══════════════════════════════════════════════════════════════════════════
+function addPlayer() {
+  const inp = document.getElementById('playerInput');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (players.includes(name)) { alert('Ese jugador ya está en la lista.'); return; }
+  players.push(name);
+  inp.value = '';
+  renderPlayerTags();
+}
+
+function removePlayer(name) {
+  players = players.filter(p => p !== name);
+  renderPlayerTags();
+}
+
+function renderPlayerTags() {
+  const el = document.getElementById('playerTags');
+  el.innerHTML = players.map(p =>
+    `<span class="tag">${esc(p)}<span class="x" onclick="removePlayer('${esc(p)}')">×</span></span>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GAME
+// ═══════════════════════════════════════════════════════════════════════════
+function startGame() {
+  if (players.length < 3) { alert('Necesitas al menos 3 jugadores.'); return; }
+  const activeCats = categories.filter(c => c.words.length > 0);
+  if (activeCats.length === 0) { alert('Añade al menos una categoría con palabras.'); return; }
+
+  const cat  = activeCats[Math.floor(Math.random() * activeCats.length)];
+  const word = cat.words[Math.floor(Math.random() * cat.words.length)];
+  gameCategory = cat.name;
+
+  // shuffle players
+  const shuffled = [...players].sort(() => Math.random() - 0.5);
+  const impIdx   = Math.floor(Math.random() * shuffled.length);
+  assignments    = shuffled.map((name, i) => ({ name, word: i === impIdx ? 'IMPOSTOR' : word }));
+  currentIdx     = 0;
+
+  showPassScreen();
+}
+
+function showPassScreen() {
+  goTo('pass');
+  document.getElementById('passCat').textContent  = gameCategory;
+  document.getElementById('passName').textContent = assignments[currentIdx].name;
+}
+
+function showReveal() {
+  const p        = assignments[currentIdx];
+  const isImp    = p.word === 'IMPOSTOR';
+  const card     = document.getElementById('revealCard');
+  const wordEl   = document.getElementById('revealWord');
+  const emojiEl  = document.getElementById('revealEmoji');
+  const hintEl   = document.getElementById('revealHint');
+  const nameEl   = document.getElementById('revealPlayerName');
+
+  nameEl.textContent  = p.name;
+  emojiEl.textContent = isImp ? '🎭' : '🔍';
+  wordEl.textContent  = p.word;
+  wordEl.className    = 'word-badge ' + (isImp ? 'evil' : 'good');
+  card.style.background = isImp ? '#1a0a0a' : '#0a1a0a';
+  card.style.border     = isImp ? '2px solid #e63030' : '2px solid #2a7a2a';
+
+  const next = currentIdx + 1;
+  hintEl.textContent = next < assignments.length
+    ? `Toca para pasar al jugador ${next + 1} / ${assignments.length}`
+    : 'Toca para empezar el debate';
+
+  goTo('reveal');
+}
+
+function nextPlayer() {
+  currentIdx++;
+  if (currentIdx >= assignments.length) {
+    goTo('end');
+  } else {
+    showPassScreen();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CATEGORIES
+// ═══════════════════════════════════════════════════════════════════════════
+function renderCatList() {
+  const el = document.getElementById('catList');
+  if (categories.length === 0) {
+    el.innerHTML = '<p style="color:#666;text-align:center;padding:20px 0;">Sin categorías. ¡Crea una!</p>';
+    return;
+  }
+  el.innerHTML = categories.map(cat => `
+    <div class="cat-item">
+      <div class="cat-header">
+        <strong>${esc(cat.name) || '<em style="color:#666">Sin nombre</em>'}</strong>
+        <div class="cat-actions">
+          <button class="btn-sm navy" onclick="openCatEditor('${cat.id}')">✏️ Editar</button>
+          <button class="btn-sm dark-red" onclick="deleteCat('${cat.id}')">🗑</button>
+        </div>
+      </div>
+      <p class="cat-sub">${cat.words.length} palabras${
+        cat.words.length > 0
+          ? ': ' + cat.words.slice(0,5).map(esc).join(', ') + (cat.words.length > 5 ? '…' : '')
+          : ''
+      }</p>
+    </div>
+  `).join('');
+}
+
+function deleteCat(id) {
+  if (!confirm('¿Eliminar esta categoría?')) return;
+  categories = categories.filter(c => c.id !== id);
+  renderCatList();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CAT EDITOR
+// ═══════════════════════════════════════════════════════════════════════════
+function openCatEditor(id) {
+  if (id) {
+    const cat   = categories.find(c => c.id === id);
+    editingCatId = id;
+    editingWords = [...cat.words];
+    document.getElementById('catNameInput').value = cat.name;
+    document.getElementById('catEditTitle').textContent = '✏️ Editar Categoría';
+  } else {
+    editingCatId = null;
+    editingWords = [];
+    document.getElementById('catNameInput').value = '';
+    document.getElementById('catEditTitle').textContent = '➕ Nueva Categoría';
+  }
+  document.getElementById('wordInput').value = '';
+  renderWordTags();
+  goTo('catEdit');
+}
+
+function addWordToEditor() {
+  const inp = document.getElementById('wordInput');
+  const w   = inp.value.trim();
+  if (!w) return;
+  if (editingWords.includes(w)) { alert('Esa palabra ya existe.'); return; }
+  editingWords.push(w);
+  inp.value = '';
+  renderWordTags();
+}
+
+function removeWordFromEditor(w) {
+  editingWords = editingWords.filter(x => x !== w);
+  renderWordTags();
+}
+
+function renderWordTags() {
+  document.getElementById('wordCount').textContent = editingWords.length;
+  document.getElementById('wordTags').innerHTML = editingWords.map(w =>
+    `<span class="tag">${esc(w)}<span class="x" onclick="removeWordFromEditor('${esc(w)}')">×</span></span>`
+  ).join('');
+}
+
+function saveCatEditor() {
+  const name = document.getElementById('catNameInput').value.trim();
+  if (!name) { alert('Ponle un nombre a la categoría.'); return; }
+
+  if (editingCatId) {
+    categories = categories.map(c =>
+      c.id === editingCatId ? { ...c, name, words: [...editingWords] } : c
+    );
+  } else {
+    categories.push({ id: Date.now().toString(), name, words: [...editingWords] });
+  }
+  goTo('categories');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(categories, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'categorias_impostor.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      categories = data;
+      alert('✅ Categorías importadas correctamente.');
+      renderCatList();
+    } catch {
+      alert('❌ Archivo JSON inválido.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UTIL
+// ═══════════════════════════════════════════════════════════════════════════
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
